@@ -1,0 +1,20 @@
+{
+  "name": "Il mio quaderno del mese",
+  "short_name": "Quaderno",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121318",
+  "theme_color": "#121318",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/icon192/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/icon512/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Il mio quaderno del mese</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+  <!-- SCRIPT FIREBASE (Realtime Database) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Fredoka', 'Segoe UI', sans-serif; 
+      background-color: #121318;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: #ffffff; 
+      margin: 0; 
+      padding: 10px; 
+    }
+
+    .container { max-width: 650px; margin: auto; }
+
+    .card { 
+      background: #1e293b; 
+      padding: 15px;
+      border-radius: 18px; 
+      border: 3px solid #38bdf8; 
+      margin-bottom: 15px; 
+      box-shadow: 0 6px 0px rgba(0, 0, 0, 0.5); 
+    }
+
+    h1, h2, h3 { font-family: 'Fredoka', sans-serif; color: #38bdf8; margin-top: 0; }
+    #auth-title { color: #38bdf8; }
+    
+    label { 
+      color: #4ade80; 
+      font-weight: bold; 
+      display: block; 
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    input[type="text"], input[type="password"], input[type="number"], textarea, select { 
+      width: 100%; 
+      padding: 9px; 
+      margin: 5px 0; 
+      border: 2px solid #475569; 
+      border-radius: 10px; 
+      box-sizing: border-box; 
+      font-size: 13px; 
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+    }
+
+    button { 
+      width: 100%; 
+      padding: 12px; 
+      background: #2563eb; 
+      color: white; 
+      border: 2px solid #60a5fa; 
+      border-radius: 12px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      font-size: 15px; 
+      margin-top: 8px; 
+      box-shadow: 0 4px 0 #1d4ed8;
+      text-transform: uppercase;
+    }
+
+    button:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #1d4ed8;
+    }
+
+    button:disabled {
+      background: #475569 !important;
+      border-color: #64748b !important;
+      box-shadow: none !important;
+      cursor: not-allowed !important;
+      color: #94a3b8 !important;
+    }
+
+    .btn-secondary { background: #475569; border-color: #94a3b8; box-shadow: 0 4px 0 #334155; }
+    .hidden { display: none !important; }
+
+    #loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      z-index: 5000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #334155;
+      border-top: 5px solid #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .loading-text { font-family: 'Fredoka', sans-serif; color: #38bdf8; font-size: 16px; font-weight: bold; }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .header-top h1 {
+      font-size: 22px;
+      line-height: 1.2;
+      margin: 0;
+      word-break: break-word;
+    }
+
+    .header-right-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .badge-monete {
+      background: linear-gradient(180deg, #fef08a 0%, #eab308 100%);
+      color: #422006;
+      padding: 5px 10px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 13px;
+      border: 2px solid #facc15;
+      box-shadow: 0 3px 0 #a16207;
+      white-space: nowrap;
+    }
+
+    .dropdown-menu-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    .btn-menu {
+      background: #38bdf8;
+      color: #0f172a;
+      border: 2px solid #7dd3fc;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #0284c7;
+      width: auto;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 38px;
+      background-color: #1e293b;
+      min-width: 180px;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.6);
+      border: 2px solid #38bdf8;
+      border-radius: 12px;
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .dropdown-content a {
+      color: white;
+      padding: 10px 14px;
+      text-decoration: none;
+      display: block;
+      font-weight: bold;
+      font-size: 13px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .dropdown-content a:hover {
+      background-color: #334155;
+      color: #38bdf8;
+    }
+
+    .show-dropdown { display: block !important; }
+
+    .calendar-modal-box {
+      background: #0f172a;
+      border: 2px solid #38bdf8;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+
+    .cal-header-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .cal-header-nav button {
+      background: #2563eb;
+      border: 1px solid #60a5fa;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      width: auto;
+      margin: 0;
+      box-shadow: 0 2px 0 #1d4ed8;
+    }
+
+    .cal-month-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #38bdf8;
+      text-transform: capitalize;
+    }
+
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .cal-day-cell {
+      aspect-ratio: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .cal-day-cell.empty { background: transparent; border: none; cursor: default; }
+
+    .cal-day-cell span {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-yellow span { background: #eab308; color: #0f172a; border: 2px solid #fef08a; }
+    .status-red span { background: #ef4444; color: white; border: 2px solid #f87171; }
+    .status-green span { background: #22c55e; color: white; border: 2px solid #4ade80; }
+    .status-locked span { background: #1a202c; color: #475569; border: 1px dashed #334155; }
+
+    .banner-bloccato {
+      background: rgba(239, 68, 68, 0.15);
+      border: 2px dashed #ef4444;
+      color: #f87171;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .quadrants-wrapper {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    @media(min-width: 768px) {
+      .quadrants-wrapper { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .quadrant-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .quadrant-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #38bdf8;
+      text-transform: uppercase;
+      border-bottom: 1px dashed #334155;
+      padding-bottom: 6px;
+    }
+
+    .todo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      margin: 4px 0;
+    }
+    .todo-row input[type="text"] { margin: 0; padding: 4px 8px; font-size: 12px; }
+
+    .box-importante {
+      border: 2px dashed #475569;
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(255,255,255,0.02);
+      margin-top: auto;
+    }
+
+    .mood-grid-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mood-day-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #cbd5e1;
+    }
+    .mood-circles-group { display: flex; gap: 6px; }
+    .mood-circle {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid #475569;
+      background: #1e293b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+    .mood-circle.mood-red { border-color: #f87171; background: #ef4444; color: #ffffff; }
+    .mood-circle.mood-red.selected-mood { box-shadow: 0 0 6px rgba(239,68,68,0.7); border-color: #ffffff; }
+    .mood-circle.mood-yellow { border-color: #fef08a; background: #eab308; color: #0f172a; }
+    .mood-circle.mood-yellow.selected-mood { box-shadow: 0 0 6px rgba(234,179,8,0.7); border-color: #ffffff; }
+    .mood-circle.mood-green { border-color: #4ade80; background: #16a34a; color: #ffffff; }
+    .mood-circle.mood-green.selected-mood { box-shadow: 0 0 6px rgba(74,222,128,0.7); border-color: #ffffff; }
+
+    .capace-section-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .capace-content-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .stars-group { display: flex; gap: 4px; cursor: pointer; }
+    .star-item { font-size: 20px; color: #475569; transition: color 0.2s; }
+    .star-item.selected-star { color: #facc15; }
+    .capace-perche-container { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .capace-perche-container input[type="text"] { margin: 0; flex: 1; }
+
+    .shop-header-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0px;
+    }
+
+    .btn-toggle-shop {
+      background: #0284c7;
+      color: #ffffff;
+      border: 2px solid #38bdf8;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 0 #0369a1;
+      width: auto;
+      margin: 0;
+      text-transform: none;
+    }
+
+    .grid-carte { 
+      display: grid; 
+      grid-template-columns: repeat(2, 1fr); 
+      gap: 8px; 
+    }
+
+    @media(min-width: 500px) {
+      .grid-carte { 
+        grid-template-columns: repeat(4, 1fr); 
+      }
+    }
+
+    .carta-item { 
+      border: 2px solid #38bdf8; 
+      border-radius: 10px; 
+      padding: 6px; 
+      text-align: center; 
+      background: #0f172a; 
+      color: #ffffff; 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4); 
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .carta-item img { 
+      width: 100%; 
+      height: 70px; 
+      object-fit: cover; 
+      border-radius: 6px; 
+    }
+    .carta-item.bloccata { 
+      background: #1e293b; 
+      border-color: #475569; 
+      color: #94a3b8; 
+    }
+    .carta-item.bloccata .img-placeholder { 
+      width: 100%; 
+      height: 70px; 
+      background: #0f172a; 
+      border-radius: 6px; 
+      display: flex; 
+      flex-direction: column;
+      align-items: center; 
+      justify-content: center; 
+      font-size: 18px; 
+      border: 1px dashed #475569;
+    }
+
+    .btn-buy-card {
+      background: #eab308;
+      color: #0f172a;
+      border: 1px solid #fef08a;
+      padding: 4px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 10px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 4px;
+      box-shadow: 0 2px 0 #a16207;
+      text-transform: none;
+    }
+
+    .rarita { 
+      font-size: 8px; 
+      font-weight: bold; 
+      text-transform: uppercase; 
+      margin-top: 2px; 
+      display: inline-block; 
+      padding: 1px 4px; 
+      border-radius: 3px; 
+    }
+    .rarita-Comune { background: #fef08a; color: #854d0e; border: 1px solid #eab308; }
+
+    .deck-slots-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .deck-slot {
+      background: #0f172a;
+      border: 2px dashed #475569;
+      border-radius: 10px;
+      height: 75px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      font-size: 18px;
+      color: #64748b;
+    }
+    .deck-slot.filled {
+      border: 2px solid #38bdf8;
+      background: #1e293b;
+      cursor: default;
+    }
+    .deck-slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .deck-slot-remove {
+      position: absolute;
+      top: 2px; right: 2px;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      font-size: 9px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .card-zoom-modal {
+        display: none;
+        position: fixed;
+        z-index: 4000;
+        padding-top: 50px;
+        left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.85);
+        backdrop-filter: blur(6px);
+        text-align: center;
+    }
+    .card-zoom-content { margin: auto; display: block; width: 90%; max-width: 320px; border-radius: 14px; border: 3px solid #38bdf8; }
+    .card-zoom-close { position: absolute; top: 15px; right: 20px; color: #ffffff; font-size: 36px; font-weight: bold; cursor: pointer; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(6px);
+      z-index: 2500;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+    }
+
+    .modal-card-content {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 3px solid #38bdf8;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 420px;
+      padding: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      position: relative;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .modal-header { text-align: center; margin-bottom: 15px; }
+    .modal-header h2 { color: #38bdf8; margin: 0; font-size: 20px; }
+
+    .msg-card {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-left: 4px solid #38bdf8;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .msg-date { font-size: 10px; color: #94a3b8; margin-bottom: 3px; }
+    .msg-title { font-weight: bold; color: #f8fafc; font-size: 14px; margin-bottom: 4px; }
+    .msg-body { font-size: 12px; color: #cbd5e1; line-height: 1.3; }
+
+    .progress-box {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 18px;
+      background: #334155;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #475569;
+      margin: 8px 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #a7f3d0 0%, #38bdf8 50%, #f472b6 100%);
+      border-radius: 8px;
+      transition: width 0.5s ease-in-out;
+    }
+    .mission-count-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #e2e8f0;
+    }
+
+    .mission-item {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .mission-info { font-size: 12px; }
+    .mission-title { font-weight: bold; color: #f8fafc; font-size: 13px; margin-bottom: 2px; }
+    .mission-desc { color: #94a3b8; font-size: 11px; }
+    .btn-claim-mission {
+      background: #22c55e;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      width: auto;
+      margin: 0;
+      box-shadow: 0 2px 0 #15803d;
+      white-space: nowrap;
+    }
+    .btn-claim-mission:disabled { background: #475569; box-shadow: none; color: #94a3b8; }
+
+    /* ARENA DI PROVA */
+    .arena-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #0f172a;
+      z-index: 3000;
+      overflow-y: auto;
+      padding: 6px;
+    }
+    .arena-container {
+      width: 100%; max-width: 480px; margin: 0 auto;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #38bdf8; border-radius: 16px; padding: 8px;
+      display: flex; flex-direction: column; gap: 6px; position: relative;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+    }
+    
+    .arena-close-btn { 
+      position: absolute; top: 6px; right: 8px; 
+      background: #ef4444; color: white; border: 2px solid #f87171; border-radius: 50%; 
+      width: 30px; height: 30px; font-size: 14px; font-weight: bold; cursor: pointer; 
+      display: flex; align-items: center; justify-content: center; z-index: 10;
+      box-shadow: 0 3px 0 #991b1b;
+    }
+    .arena-close-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #991b1b; }
+    
+    .player-hp-bar { 
+      background: #1e293b; 
+      border: 2px solid #475569; 
+      border-radius: 10px; 
+      padding: 4px 10px; 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 8px; 
+      font-weight: bold; 
+      width: fit-content; 
+      max-width: 100%;
+    }
+    .bar-align-center { margin: 0 auto; }
+    .active-turn-bar { border-color: #4ade80 !important; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4); }
+    .hp-value { color: #ef4444; font-size: 13px; white-space: nowrap; }
+    .player-name-txt { color: #f8fafc; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .zone-title { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; text-align: center; margin: 1px 0; }
+    
+    .bench-container { 
+      display: flex; 
+      justify-content: center;
+      align-items: center;
+      gap: 6px; 
+      background: rgba(255, 255, 255, 0.03); 
+      padding: 6px; 
+      border-radius: 10px; 
+      min-height: 80px; 
+      border: 1px solid rgba(255,255,255,0.05); 
+      overflow-x: auto;
+    }
+    
+    .card-tcg {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 2px solid #f59e0b;
+      border-radius: 8px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    
+    .card-bench { width: 68px; height: 75px; transition: transform 0.15s ease; }
+    .card-bench:hover { transform: translateY(-2px); border-color: #38bdf8; }
+    .bench-empty { border: 2px dashed #475569; background: rgba(0,0,0,0.2); cursor: not-allowed; justify-content: center; color: #64748b; font-size: 12px; box-shadow: none; }
+    
+    .card-active-tcg { 
+      width: 105px; 
+      height: 145px; 
+      border-width: 2px; 
+      border-radius: 10px;
+    }
+    .card-empty-active { border: 2px dashed #ef4444; background: rgba(239, 68, 68, 0.08); justify-content: center; color: #ef4444; font-weight: bold; font-size: 11px; text-align: center; cursor: default; }
+    
+    .card-stats { display: flex; justify-content: space-between; width: 100%; font-size: 9px; font-weight: bold; z-index: 2; }
+    .stat-atk { background: #dc2626; color: white; padding: 1px 3px; border-radius: 4px; }
+    .stat-def { background: #2563eb; color: white; padding: 1px 3px; border-radius: 4px; }
+    
+    .card-img-arena { 
+      width: 100%; 
+      flex: 1;
+      margin: 2px 0;
+      background: #334155; 
+      border-radius: 4px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 20px; 
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .card-img-arena img { width: 100%; height: 100%; object-fit: cover; }
+    .card-name-arena { font-size: 9px; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; color: #f8fafc; }
+    
+    .battle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .left-controls-box, .side-controls-box {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      max-width: 130px;
+    }
+
+    .status-panel {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    
+    .turn-badge { font-size: 10px; font-weight: bold; color: #4ade80; }
+    .pa-container { font-size: 11px; color: #facc15; font-weight: bold; }
+
+    .btn-action-arena { 
+      background: #dc2626; color: white; border: none; padding: 6px 4px; border-radius: 8px; 
+      font-size: 10px; font-weight: bold; cursor: pointer; width: 100%; margin: 0; 
+      box-shadow: 0 2px 0 #991b1b; text-transform: uppercase;
+    }
+    .btn-action-arena:active { transform: translateY(1px); box-shadow: none; }
+    
+    .btn-pass-arena { 
+      background: #0284c7; color: white; border: none; padding: 6px 4px; border-radius: 8px; 
+      font-size: 10px; font-weight: bold; cursor: pointer; width: 100%; margin: 0; 
+      box-shadow: 0 2px 0 #0369a1; text-transform: uppercase;
+    }
+    .btn-pass-arena:active { transform: translateY(1px); box-shadow: none; }
+
+    .event-card-box { 
+      background: linear-gradient(90deg, #1e1b4b 0%, #311b92 100%); 
+      border: 2px dashed #818cf8; 
+      border-radius: 10px; 
+      padding: 6px 10px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      width: 100%;
+      box-sizing: border-box;
+      gap: 8px;
+    }
+    .event-info-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+      overflow: hidden;
+      flex: 1;
+    }
+    .event-title { font-size: 10px; color: #a5b4fc; font-weight: bold; white-space: nowrap; }
+    .event-desc { font-size: 9.5px; color: #e0e7ff; line-height: 1.1; word-wrap: break-word; }
+    .btn-use-event { 
+      background: #6366f1; color: white; border: none; padding: 5px 8px; border-radius: 6px; 
+      font-size: 9px; font-weight: bold; cursor: pointer; width: auto; margin: 0; flex-shrink: 0; 
+      box-shadow: 0 2px 0 #4338ca;
+    }
+
+    .confirm-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 4000;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+    }
+    .confirm-box {
+      background: #1e293b;
+      border: 3px solid #ef4444;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      max-width: 320px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+    }
+    .confirm-box p {
+      font-size: 15px;
+      color: #f8fafc;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .confirm-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-confirm-yes {
+      background: #dc2626;
+      border: 2px solid #f87171;
+      box-shadow: 0 3px 0 #991b1b;
+    }
+    .btn-confirm-no {
+      background: #475569;
+      border: 2px solid #94a3b8;
+      box-shadow: 0 3px 0 #334155;
+    }
+  </style>
+
+  <!-- Collegamento al Manifest della PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121318">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Registrazione del Service Worker per gli aggiornamenti automatici -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then((reg) => { console.log('Service Worker registrato con successo!'); })
+          .catch((err) => { console.log('Registrazione fallita:', err); });
+      });
+    }
+  </script>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Caricamento in corso...</div>
+</div>
+
+<div class="container">
+
+  <!-- SCHERMATA LOGIN -->
+  <div id="section-auth" class="card">
+    <h1 id="auth-title">Accedi al tuo Quaderno</h1>
+    
+    <label><b>Nome Utente:</b></label>
+    <input type="text" id="authUser" placeholder="Scegli o inserisci il tuo username">
+    
+    <label><b>Password:</b></label>
+    <input type="password" id="authPass" placeholder="Inserisci la password">
+    
+    <div id="box-login">
+      <button onclick="effettuaLogin()">Entra</button>
+      <button class="btn-secondary" onclick="mostraRegistrazione()">Non hai un account? Registrati</button>
+    </div>
+
+    <div id="box-register" class="hidden">
+      <button onclick="effettuaRegistrazione()" style="background:#16a34a;">Crea Account e Registrati</button>
+      <button class="btn-secondary" onclick="mostraLogin()">Torna all'Accedi</button>
+    </div>
+
+    <p id="auth-msg" style="font-weight:bold; text-align:center; margin-top:10px; font-size: 13px;"></p>
+  </div>
+
+  <!-- APPLICAZIONE -->
+  <div id="section-app" class="hidden">
+    
+    <div class="header-top card" style="margin-bottom: 12px; padding: 10px 12px;">
+      <h1 id="welcome-header">Quaderno</h1>
+      
+      <div class="header-right-controls">
+        <div class="badge-monete">🪙 <span id="val-monete">0</span></div>
+
+        <div class="dropdown-menu-container">
+          <button class="btn-menu" onclick="toggleMenu()">Menu ▾</button>
+          <div id="myDropdown" class="dropdown-content">
+            <a href="#" onclick="toggleSezioneCalendario()">📅 Calendario Mensile</a>
+            <a href="#" onclick="apriProfilo()">👤 Profilo</a>
+            <a href="#" onclick="apriMessaggi()">💬 Messaggi</a>
+            <a href="#" onclick="apriMissioni()">🎯 Missioni</a>
+            <a href="#" onclick="apriImpostazioni()">⚙️ Impostazioni</a>
+            <a href="#" onclick="effettuaLogout()" style="color: #ef4444;">🚪 Esci</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-calendar-box" class="card hidden">
+      <div class="calendar-modal-box">
+        <div class="cal-header-nav">
+          <button onclick="cambiaMesePrecedente()">◀</button>
+          <div id="cal-month-title" class="cal-month-title">Mese Anno</div>
+          <button onclick="cambiaMeseSuccessivo()">▶</button>
+        </div>
+        <div class="cal-weekdays">
+          <div>Lun</div><div>Mar</div><div>Mer</div><div>Gio</div><div>Ven</div><div>Sab</div><div>Dom</div>
+        </div>
+        <div id="cal-grid" class="cal-grid"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="sezione-settimana" style="margin-top: 5px;">
+        <h2 id="titolo-settimana" style="font-size: 18px;">Seleziona un giorno dal Calendario</h2>
+
+        <div id="banner-bloccato" class="banner-bloccato hidden">
+          🔒 Questo giorno è bloccato (puoi compilarlo solo quando diventerà il giorno corrente, oppure rivedi ciò che hai scritto).
+        </div>
+
+        <div class="quadrants-wrapper">
+          <div class="quadrant-box">
+            <div class="quadrant-title">Cosa ho da fare</div>
+            <div id="todo-list-container">
+              <div class="todo-row"><input type="text" class="todo-txt" id="attivita1" placeholder="Attività 1..."></div>
+              <div class="todo-row"><input type="text" class="todo-txt" id="attivita2" placeholder="Attività 2..."></div>
+              <div class="todo-row"><input type="text" class="todo-txt" id="attivita3" placeholder="Attività 3..."></div>
+              <div class="todo-row"><input type="text" class="todo-txt" id="attivita4" placeholder="Attività 4..."></div>
+              <div class="todo-row"><input type="text" class="todo-txt" id="attivita5" placeholder="Attività 5..."></div>
+            </div>
+            
+            <div class="box-importante">
+              <label style="margin-top:0;">La cosa piu importante:</label>
+              <textarea id="cosaImportante" rows="2" placeholder="Scrivi la priorità..."></textarea>
+            </div>
+          </div>
+
+          <div class="quadrant-box">
+            <div class="quadrant-title">Come sto oggi</div>
+            <p style="font-size: 11px; color: #94a3b8; margin: 0;">Colora un cerchio: male (1), così così (2), bene (3)</p>
+            
+            <div class="mood-grid-container" id="moodGridContainer"></div>
+
+            <label style="margin-top:auto;">Seleziona emozione:</label>
+            <select id="selectEmozionediOggi">
+              <option value="">-- Scegli l'emozione --</option>
+              <option value="Felice">Felice</option>
+              <option value="Triste">Triste</option>
+              <option value="Arrabbiato">Arrabbiato</option>
+              <option value="Ansioso">Ansioso</option>
+              <option value="Tranquillo">Tranquillo</option>
+              <option value="Stanco">Stanco</option>
+            </select>
+
+            <label style="margin-top: 6px;">Perché?</label>
+            <textarea id="percheEmozione" rows="2" placeholder="Esprimi il perché ti senti così..."></textarea>
+          </div>
+
+          <div class="quadrant-box" id="quadranteFineSettimana">
+            <div class="quadrant-title">A fine settimana</div>
+            <div id="avvisoVenerdiSolo" style="font-size: 11px; color: #f87171; font-weight: bold; margin-bottom: 4px;">
+              🔒 Si attiva esclusivamente il 5° giorno (Venerdì)!
+            </div>
+
+            <label>Cosa sono riuscito/a a fare?</label>
+            <select id="fineRiuscito">
+              <option value="">-- Seleziona livello --</option>
+              <option value="1">1: nulla</option>
+              <option value="2">2: poco</option>
+              <option value="3">3: qualcosa</option>
+              <option value="4">4: quasi tutto</option>
+              <option value="5">5: tutto</option>
+            </select>
+
+            <label>Cosa è stato difficile?</label>
+            <textarea id="fineDifficile" rows="2" placeholder="Difficoltà..."></textarea>
+
+            <label>La prossima settimana voglio:</label>
+            <textarea id="fineProssima" rows="2" placeholder="Nuovi obiettivi..."></textarea>
+          </div>
+        </div>
+
+        <div class="capace-section-box">
+          <div class="capace-content-row">
+            <label style="margin:0; color:#38bdf8;">Com’è la mia motivazione scolastica oggi?</label>
+            <div class="stars-group" id="starsGroupContainer">
+              <span class="star-item" onclick="selezionaStella(1)">★</span>
+              <span class="star-item" onclick="selezionaStella(2)">★</span>
+              <span class="star-item" onclick="selezionaStella(3)">★</span>
+              <span class="star-item" onclick="selezionaStella(4)">★</span>
+              <span class="star-item" onclick="selezionaStella(5)">★</span>
+            </div>
+          </div>
+          <div class="capace-perche-container">
+            <label style="margin:0;">Perché:</label>
+            <input type="text" id="capacePercheInput" placeholder="Spiega perché...">
+          </div>
+        </div>
+
+        <button id="btn-salva-giorno" onclick="inviaGiornoCorrente()" style="margin-top: 15px;">Salva e Invia Scheda</button>
+      </div>
+    </div>
+
+    <!-- NEGOZIO CARTE -->
+    <div class="card" style="padding: 12px;">
+      <div class="shop-header-title">
+        <h2 style="margin: 0; font-size: 16px; color: #38bdf8;">Negozio</h2>
+        <button class="btn-toggle-shop" onclick="toggleNegozioExtra()">
+          <span id="txt-btn-extra">▼ Mostra Catalogo</span>
+        </button>
+      </div>
+      
+      <p style="font-size: 11px; color: #94a3b8; margin: 5px 0 10px 0;">
+        Colleziona le 21 carte comuni acquistandoli con le tue monete (Costo: 15 🪙).
+      </p>
+
+      <div id="contenitoreExtraCarte" class="hidden" style="border-top: 2px dashed #334155; padding-top: 10px;">
+        <div id="gridCarteExtra" class="grid-carte"></div>
+      </div>
+    </div>
+
+    <!-- MAZZO DI BATTAGLIA -->
+    <div class="card" style="padding: 12px; border-color: #4ade80;">
+      <div class="shop-header-title">
+        <h2 style="margin: 0; font-size: 16px; color: #4ade80;">Deck</h2>
+        <button class="btn-toggle-shop" style="background: #15803d; border-color: #4ade80; box-shadow: 0 2px 0 #166534;" onclick="toggleMazzoTendina()">
+          <span id="txt-btn-mazzo">▼ Mostra Deck</span>
+        </button>
+      </div>
+
+      <p style="font-size: 11px; color: #94a3b8; margin: 5px 0 10px 0;">
+        Componi un mazzo di 5 carte.
+      </p>
+
+      <div id="contenitoreMazzoTendina" class="hidden" style="border-top: 2px dashed #334155; padding-top: 10px;">
+        <div style="font-size: 12px; font-weight: bold; color: #4ade80; margin-bottom: 4px;">I tuoi 5 slot attivi:</div>
+        <div class="deck-slots-grid" id="deckSlotsContainer"></div>
+
+        <div style="font-size: 12px; font-weight: bold; color: #38bdf8; margin: 12px 0 6px 0;">Scegli dalle tue carte sbloccate:</div>
+        <div id="gridCarteSbloccateMazzo" class="grid-carte"></div>
+
+        <button onclick="salvaMazzoUtente()" style="background: #16a34a; border-color: #4ade80; margin-top: 12px;">Salva Mazzo</button>
+      </div>
+    </div>
+
+    <!-- ARENA DI BATTAGLIA 1VS1 ONLINE -->
+    <div class="card" style="border-color: #4ade80; text-align: center; padding: 15px;">
+      <h2 style="margin-bottom: 8px; color: #4ade80; font-size: 18px;">Arena di Battaglia 1vs1 Online</h2>
+      <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 12px;">
+        Inserisci un codice stanza per sfidare un compagno da due account e dispositivi diversi!
+      </p>
+
+      <!-- Gestione Stanza -->
+      <div style="background: #0f172a; padding: 10px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 10px;">
+        <input type="text" id="inputCodiceStanza" placeholder="Inserisci Codice Stanza (es. 1234)" style="text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
+        <div style="display: flex; gap: 8px;">
+          <button onclick="creaOEntraStanza()" style="background: #16a34a; border-color: #4ade80; margin: 0; font-size: 13px;">ENTRA / CREA STANZA</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- MODALI -->
+<div id="profileModal" class="modal-overlay">
+  <div class="modal-card-content">
+    <button onclick="chiudiProfilo()" style="position:relative; float:right; width:26px; height:26px; font-size:12px; background:#ef4444; color:white; border:none; border-radius:50%; cursor:pointer;">✖</button>
+    <div class="modal-header"><h2>Il mio Profilo</h2></div>
+    <label><b>Nickname:</b></label><input type="text" id="profNickname" placeholder="Nickname">
+    <label><b>Nome:</b></label><input type="text" id="profNome" placeholder="Nome">
+    <label><b>Cognome:</b></label><input type="text" id="profCognome" placeholder="Cognome">
+    <label><b>Età:</b></label><input type="number" id="profEta" placeholder="Età">
+    <label><b>Scuola:</b></label><input type="text" id="profScuola" placeholder="Scuola">
+    <label><b>Classe:</b></label><input type="text" id="profClasse" placeholder="Classe">
+    <button onclick="salvaProfilo()" style="margin-top: 15px; background: #16a34a; border-color: #4ade80;">💾 Salva Profilo</button>
+    <p id="prof-msg" style="text-align: center; font-size: 12px; margin-top: 8px; font-weight: bold;"></p>
+  </div>
+</div>
+
+<div id="messagesModal" class="modal-overlay">
+  <div class="modal-card-content">
+    <button onclick="chiudiMessaggi()" style="position:relative; float:right; width:26px; height:26px; font-size:12px; background:#ef4444; color:white; border:none; border-radius:50%; cursor:pointer;">✖</button>
+    <div class="modal-header"><h2>Comunicazioni</h2></div>
+    <div id="listaMessaggiContainer"><p style="text-align: center; color: #94a3b8; font-size: 12px;">Caricamento...</p></div>
+  </div>
+</div>
+
+<div id="missionsModal" class="modal-overlay">
+  <div class="modal-card-content">
+    <button onclick="chiudiMissioni()" style="position:relative; float:right; width:26px; height:26px; font-size:12px; background:#ef4444; color:white; border:none; border-radius:50%; cursor:pointer;">✖</button>
+    <div class="modal-header"><h2>Missioni</h2></div>
+    <div class="progress-box">
+      <div style="font-size: 12px; font-weight: bold; color: #cbd5e1;">Avanzamento</div>
+      <div class="progress-bar-bg"><div id="mission-progress-fill" class="progress-bar-fill"></div></div>
+      <div class="mission-count-badge">Riscattate: <span id="completed-count-text">0</span> / 3</div>
+    </div>
+    <div class="mission-item"><div class="mission-info"><div class="mission-title">1. Accesso</div><div class="mission-desc">Fai il login nell'app</div></div><button id="btn-m1" class="btn-claim-mission" onclick="riscattaMissione(1)" disabled>Incompleta</button></div>
+    <div class="mission-item"><div class="mission-info"><div class="mission-title">2. Compilazione</div><div class="mission-desc">Salva una scheda</div></div><button id="btn-m2" class="btn-claim-mission" onclick="riscattaMissione(2)" disabled>Incompleta</button></div>
+    <div class="mission-item"><div class="mission-info"><div class="mission-title">3. Profilo</div><div class="mission-desc">Compila il profilo</div></div><button id="btn-m3" class="btn-claim-mission" onclick="riscattaMissione(3)" disabled>Incompleta</button></div>
+  </div>
+</div>
+
+<!-- Modal Zoom Carta -->
+<div id="cardZoomModal" class="card-zoom-modal" onclick="closeCardZoom()">
+    <span class="card-zoom-close" onclick="closeCardZoom()">&times;</span>
+    <img id="cardZoomImage" class="card-zoom-content" src="">
+</div>
+
+<!-- ARENA DI PROVA 2 GIOCATORI (CON PROSPETTIVA PERSONALIZZATA) -->
+<div id="arenaModal" class="arena-modal">
+  <div class="arena-container">
+    <button class="arena-close-btn" onclick="richiediUscitaArena()">✕</button>
+
+    <!-- AVVERSARIO (SEMPRE IN ALTO) -->
+    <div class="player-hp-bar bar-align-center" id="bar-p2">
+      <span class="player-name-txt" id="label-p2">Avversario</span>
+      <span class="hp-value">HP <span id="hp-p2">20</span></span>
+    </div>
+
+    <div>
+      <div class="zone-title" id="title-bench-p2">Panchina Avversario</div>
+      <div class="bench-container" id="p2-bench" style="margin-bottom: 4px;"></div>
+      
+      <div class="battle-row">
+        <div class="left-controls-box"></div>
+        <div class="card-tcg card-active-tcg" id="p2-active-card" style="border-color: #ef4444;"></div>
+        <div class="side-controls-box">
+          <!-- Pulsanti avversario disabilitati localmente -->
+          <button class="btn-action-arena" id="btn-attack-p2" style="opacity:0.5;">Attacca</button>
+          <button class="btn-pass-arena" id="btn-pass-p2" style="opacity:0.5;">Passa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENTO TERRENO CASUALE -->
+    <div class="event-card-box">
+      <div class="event-info-container">
+        <div class="event-title" id="event-name">Effetto Terreno:</div>
+        <div class="event-desc" id="event-desc">Caricamento...</div>
+      </div>
+      <button class="btn-use-event" id="btn-use-card" onclick="attivaEffettoTerreno()">Attiva (1PA)</button>
+    </div>
+
+    <!-- TU (SEMPRE IN BASSO) -->
+    <div>
+      <div class="battle-row" style="margin-bottom: 6px;">
+        <div class="left-controls-box">
+          <div class="status-panel">
+            <div class="turn-badge" id="txt-turn">Turno: ...</div>
+            <div class="pa-container">PA: <span id="val-pa">2</span>/3</div>
+          </div>
+        </div>
+
+        <div class="card-tcg card-active-tcg" id="p1-active-card"></div>
+        
+        <div class="side-controls-box">
+          <button class="btn-action-arena" id="btn-attack-p1" onclick="eseguiAttaccoMio()">Attacca</button>
+          <button class="btn-pass-arena" id="btn-pass-p1" onclick="fineTurno()">Passa Turno</button>
+        </div>
+      </div>
+      
+      <div class="zone-title" id="title-bench-p1">La tua Panchina (Tocca per scambiare - 1 PA)</div>
+      <div class="bench-container" id="p1-bench"></div>
+    </div>
+
+    <!-- BARRA TU (IN BASSO) -->
+    <div class="player-hp-bar bar-align-center active-turn-bar" id="bar-p1">
+      <span class="player-name-txt" id="label-p1">Tu</span>
+      <span class="hp-value">HP <span id="hp-p1">20</span></span>
+    </div>
+  </div>
+</div>
+
+<div id="confirmExitModal" class="confirm-modal">
+  <div class="confirm-box">
+    <p>Se esci perderai la partita.<br>Vuoi uscire?</p>
+    <div class="confirm-buttons">
+      <button class="btn-confirm-yes" onclick="confermaUscitaArena()">Sì</button>
+      <button class="btn-confirm-no" onclick="chiudiConfermaUscita()">No</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyTBN1a9EW0cFvWeCmSp5v3zXtgOo-G12NWWrZUmoWN2E1iuncaGwnr6Zel5-9qqve/exec";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyARbg1B2wo-3X00L0ITPRZOfYgzQyD93jc",
+    authDomain: "videsapp-9c016.firebaseapp.com",
+    databaseURL: "https://videsapp-9c016-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "videsapp-9c016",
+    storageBucket: "videsapp-9c016.firebasestorage.app",
+    messagingSenderId: "351338588674",
+    appId: "1:351338588674:web:4fdc4103db74521ca0d51b"
+  };
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  const database = firebase.database();
+  
+  let currentUser = "";
+  let currentNickname = "";
+  let unlockedCards = [];
+  let carteCatalogo = [];
+  let monete = 0;
+  const PREZZO_CARTA = 15;
+
+  let mazzoCorrente = [null, null, null, null, null]; 
+  let profiloCompilatoPrimaVolta = false;
+  let giorniCompilatiSettimana = new Set();
+
+  let dataOggiTelefono = new Date();
+  let annoVisualizzato = dataOggiTelefono.getFullYear();
+  let meseVisualizzato = dataOggiTelefono.getMonth(); 
+  let giornoSelezionatoChiave = ""; 
+  let giornoSelezionatoDataObj = null;
+
+  let databaseDiarioLocale = {};
+  let moodSelezionatoCorrente = null;
+  let stelleSelezionateCapace = 0;
+
+  let statoMissioni = {
+    1: { sbloccata: false, riscatta: false },
+    2: { sbloccata: false, riscatta: false },
+    3: { sbloccata: false, riscatta: false }
+  };
+
+  let stanzaIdCorrente = null;
+  let mioRuoloStanza = 1; // 1 per G1 (Creatore), 2 per G2 (Ospite)
+  let refStanzaFirebase = null;
+  let isModalitaOnline = true;
+
+  let turnoAttuale = 1; 
+  let conteggioTurni = 1;
+  let paP1 = 2;
+  let paP2 = 2;
+  let haAttaccatoQuestoTurnoP1 = false;
+  let haAttaccatoQuestoTurnoP2 = false;
+
+  let p1 = { hp: 20, attiva: null, panchina: [] };
+  let p2 = { hp: 20, attiva: null, panchina: [] };
+
+  const elencoEffettiTerreno = [
+    { id: 1, nome: "Focus", desc: "+1 ATK per questo turno alla carta attiva." },
+    { id: 2, nome: "Resistenza", desc: "+1 DEF per questo turno alla carta attiva." },
+    { id: 3, nome: "Scatto", desc: "Il prossimo attacco costa 0 PA." },
+    { id: 4, nome: "Respiro", desc: "Cura +1 HP al tuo giocatore." },
+    { id: 5, nome: "Precisione", desc: "Riduce di 1 la DEF della carta avversaria." },
+    { id: 6, nome: "Muro Rapido", desc: "+2 DEF se la carta ha DEF superiore all'ATK." },
+    { id: 7, nome: "Intuizione", desc: "Infliggi 1 danno diretto agli HP dell'avversario." },
+    { id: 8, nome: "Staffetta", desc: "Cambia carta attiva con la panchina a costo 0 PA." },
+    { id: 9, nome: "Foga", desc: "+1 danno extra se attacchi per primo in questo turno." },
+    { id: 10, nome: "Schivata", desc: "Riduce di 1 qualsiasi danno diretto in arrivo." },
+    { id: 11, nome: "Energia", desc: "Restituisce +1 PA immediato al giocatore di turno." },
+    { id: 12, nome: "Condivisione", desc: "Entrambi i giocatori recuperano +1 HP." },
+    { id: 13, nome: "Spunto", desc: "Raddoppia l'ATK se l'attacco attuale è <= 3." },
+    { id: 14, nome: "Barriera", desc: "La Difesa della carta non può scendere sotto a 1." },
+    { id: 15, nome: "Scompiglio", desc: "Inserisce temporaneamente in disordine la panchina avversaria." }
+  ];
+
+  let effettoTerrenoCorrente = null;
+  let effettoUsatoNelCiclo = false;
+
+  function mostraCaricamento(testo = "Caricamento...") {
+    document.getElementById('loading-text').innerText = testo;
+    document.getElementById('loading-overlay').style.display = "flex";
+  }
+  function nascondiCaricamento() {
+    document.getElementById('loading-overlay').style.display = "none";
+  }
+
+  window.onload = function() {
+    const savedUser = localStorage.getItem('vides_user');
+    const savedPass = localStorage.getItem('vides_pass');
+    const savedNick = localStorage.getItem('vides_nick');
+    if (savedUser && savedPass) {
+      document.getElementById('authUser').value = savedUser;
+      document.getElementById('authPass').value = savedPass;
+      if(savedNick) currentNickname = savedNick;
+      effettuaLoginAutomatico(savedUser, savedPass);
+    }
+  };
+
+  function toggleMenu() {
+    document.getElementById("myDropdown").classList.toggle("show-dropdown");
+  }
+
+  window.onclick = function(event) {
+    if (!event.target.matches('.btn-menu')) {
+      const dropdowns = document.getElementsByClassName("dropdown-content");
+      for (let i = 0; i < dropdowns.length; i++) {
+        dropdowns[i].classList.remove('show-dropdown');
+      }
+    }
+  }
+
+  function toggleSezioneCalendario() {
+    const box = document.getElementById('section-calendar-box');
+    box.classList.toggle('hidden');
+    document.getElementById('myDropdown').classList.remove('show-dropdown');
+    
+    if (!box.classList.contains('hidden')) {
+      annoVisualizzato = dataOggiTelefono.getFullYear();
+      meseVisualizzato = dataOggiTelefono.getMonth();
+      costruisciCalendarioMensile();
+      selezionaGiornoCalendario(annoVisualizzato, meseVisualizzato, dataOggiTelefono.getDate(), new Date(), annoVisualizzato, meseVisualizzato, dataOggiTelefono.getDate(), false);
+    }
+  }
+
+  function impostaGiornoOdiernoAutomatico() {
+    const oggi = new Date();
+    annoVisualizzato = oggi.getFullYear();
+    meseVisualizzato = oggi.getMonth();
+    const giornoCorrente = oggi.getDate();
+    
+    const chiaveData = `${annoVisualizzato}-${meseVisualizzato}-${giornoCorrente}`;
+    let isCompilato = databaseDiarioLocale[chiaveData] !== undefined;
+    
+    selezionaGiornoCalendario(annoVisualizzato, meseVisualizzato, giornoCorrente, oggi, annoVisualizzato, meseVisualizzato, giornoCorrente, isCompilato);
+  }
+
+  function cambiaMesePrecedente() {
+    meseVisualizzato--;
+    if (meseVisualizzato < 0) { meseVisualizzato = 11; annoVisualizzato--; }
+    costruisciCalendarioMensile();
+  }
+
+  function cambiaMeseSuccessivo() {
+    meseVisualizzato++;
+    if (meseVisualizzato > 11) { meseVisualizzato = 0; annoVisualizzato++; }
+    costruisciCalendarioMensile();
+  }
+
+  function costruisciCalendarioMensile() {
+    const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+    document.getElementById('cal-month-title').innerText = `${nomiMesi[meseVisualizzato]} ${annoVisualizzato}`;
+
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = "";
+
+    const primoGiornoDelMese = new Date(annoVisualizzato, meseVisualizzato, 1);
+    let giornoInizioSettimana = primoGiornoDelMese.getDay();
+    giornoInizioSettimana = (giornoInizioSettimana === 0) ? 6 : giornoInizioSettimana - 1;
+
+    const ultimoGiorno = new Date(annoVisualizzato, meseVisualizzato + 1, 0);
+    const totaleGiorniMese = ultimoGiorno.getDate();
+
+    const oggiY = dataOggiTelefono.getFullYear();
+    const oggiM = dataOggiTelefono.getMonth();
+    const oggiD = dataOggiTelefono.getDate();
+
+    for (let i = 0; i < giornoInizioSettimana; i++) {
+      const cellaVuota = document.createElement('div');
+      cellaVuota.className = "cal-day-cell empty";
+      grid.appendChild(cellaVuota);
+    }
+
+    for (let d = 1; d <= totaleGiorniMese; d++) {
+      const cella = document.createElement('div');
+      cella.className = "cal-day-cell";
+
+      const dataCella = new Date(annoVisualizzato, meseVisualizzato, d);
+      const chiaveData = `${annoVisualizzato}-${meseVisualizzato}-${d}`;
+      let isCompilato = databaseDiarioLocale[chiaveData] !== undefined;
+
+      let classeColore = "";
+
+      if (annoVisualizzato === oggiY && meseVisualizzato === oggiM && d === oggiD) {
+        classeColore = "status-yellow";
+      } else if (dataCella < new Date(oggiY, oggiM, oggiD)) {
+        classeColore = isCompilato ? "status-green" : "status-red";
+      } else {
+        classeColore = "status-locked";
+      }
+
+      cella.innerHTML = `<span class="${classeColore}">${d}</span>`;
+      cella.onclick = () => selezionaGiornoCalendario(annoVisualizzato, meseVisualizzato, d, dataCella, oggiY, oggiM, oggiD, isCompilato);
+      grid.appendChild(cella);
+    }
+  }
+
+  function selezionaGiornoCalendario(anno, mese, giorno, dataCella, oggiY, oggiM, oggiD, isCompilato) {
+    giornoSelezionatoChiave = `${anno}-${mese}-${giorno}`;
+    giornoSelezionatoDataObj = dataCella;
+    const eOggi = (anno === oggiY && mese === oggiM && giorno === oggiD);
+    const ePassato = dataCella < new Date(oggiY, oggiM, oggiD);
+    const eVenerdi = (dataCella.getDay() === 5);
+
+    document.getElementById('titolo-settimana').innerText = `Giorno: ${giorno}/${mese + 1}/${anno}`;
+
+    const banner = document.getElementById('banner-bloccato');
+    const btnSalva = document.getElementById('btn-salva-giorno');
+    const quadranteVenerdi = document.getElementById('quadranteFineSettimana');
+    const avvisoVen = document.getElementById('avvisoVenerdiSolo');
+
+    if (eVenerdi) {
+      quadranteVenerdi.style.opacity = "1";
+      avvisoVen.classList.add('hidden');
+      document.getElementById('fineRiuscito').disabled = false;
+      document.getElementById('fineDifficile').disabled = false;
+      document.getElementById('fineProssima').disabled = false;
+    } else {
+      quadranteVenerdi.style.opacity = "0.4";
+      avvisoVen.classList.remove('hidden');
+      document.getElementById('fineRiuscito').disabled = true;
+      document.getElementById('fineDifficile').disabled = true;
+      document.getElementById('fineProssima').disabled = true;
+    }
+
+    renderizzaGiornoCorrenteMood(dataCella);
+
+    if (isCompilato) {
+      const salvato = databaseDiarioLocale[giornoSelezionatoChiave];
+      document.getElementById('attivita1').value = salvato.attivita1 || "";
+      document.getElementById('attivita2').value = salvato.attivita2 || "";
+      document.getElementById('attivita3').value = salvato.attivita3 || "";
+      document.getElementById('attivita4').value = salvato.attivita4 || "";
+      document.getElementById('attivita5').value = salvato.attivita5 || "";
+      document.getElementById('cosaImportante').value = salvato.cosaImportante || "";
+      document.getElementById('selectEmozionediOggi').value = salvato.emozione || "";
+      document.getElementById('percheEmozione').value = salvato.percheEmozione || "";
+      moodSelezionatoCorrente = salvato.mood || null;
+      if(moodSelezionatoCorrente) selezionaMood(moodSelezionatoCorrente);
+
+      stelleSelezionateCapace = salvato.stelleCapace || 0;
+      aggiornaGraficaStelle();
+      document.getElementById('capacePercheInput').value = salvato.capacePerche || "";
+
+      if (eVenerdi) {
+        document.getElementById('fineRiuscito').value = salvato.fineRiuscito || "";
+        document.getElementById('fineDifficile').value = salvato.fineDifficile || "";
+        document.getElementById('fineProssima').value = salvato.fineProssima || "";
+      }
+    } else {
+      document.getElementById('attivita1').value = "";
+      document.getElementById('attivita2').value = "";
+      document.getElementById('attivita3').value = "";
+      document.getElementById('attivita4').value = "";
+      document.getElementById('attivita5').value = "";
+      document.getElementById('cosaImportante').value = "";
+      document.getElementById('selectEmozionediOggi').value = "";
+      document.getElementById('percheEmozione').value = "";
+      moodSelezionatoCorrente = null;
+      renderizzaGiornoCorrenteMood(dataCella);
+
+      stelleSelezionateCapace = 0;
+      aggiornaGraficaStelle();
+      document.getElementById('capacePercheInput').value = "";
+
+      if (eVenerdi) {
+        document.getElementById('fineRiuscito').value = "";
+        document.getElementById('fineDifficile').value = "";
+        document.getElementById('fineProssima').value = "";
+      }
+    }
+
+    if (eOggi || (ePassato && isCompilato)) {
+      banner.classList.add('hidden');
+      btnSalva.disabled = false;
+    } else {
+      banner.classList.remove('hidden');
+      btnSalva.disabled = true;
+    }
+  }
+
+  function renderizzaGiornoCorrenteMood(dataObj) {
+    const container = document.getElementById('moodGridContainer');
+    container.innerHTML = "";
+    
+    const giorniNomi = ["DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"];
+    const giornoIndex = dataObj.getDay();
+    const nomeGiorno = giorniNomi[giornoIndex];
+
+    const rowDiv = document.createElement('div');
+    rowDiv.className = "mood-day-row";
+    rowDiv.innerHTML = `
+      <span>${nomeGiorno}</span>
+      <div class="mood-circles-group" data-day="corrente">
+        <div class="mood-circle mood-red" onclick="selezionaMood(1)">1</div>
+        <div class="mood-circle mood-yellow" onclick="selezionaMood(2)">2</div>
+        <div class="mood-circle mood-green" onclick="selezionaMood(3)">3</div>
+      </div>
+    `;
+    container.appendChild(rowDiv);
+    if(moodSelezionatoCorrente) selezionaMood(moodSelezionatoCorrente);
+  }
+
+  function selezionaMood(valore) {
+    moodSelezionatoCorrente = valore;
+    const gruppo = document.querySelector('.mood-circles-group[data-day="corrente"]');
+    if (gruppo) {
+      const cerchi = gruppo.querySelectorAll('.mood-circle');
+      cerchi.forEach((c, idx) => {
+        if ((idx + 1) === valore) c.classList.add('selected-mood');
+        else c.classList.remove('selected-mood');
+      });
+    }
+  }
+
+  function selezionaStella(valore) {
+    stelleSelezionateCapace = valore;
+    aggiornaGraficaStelle();
+  }
+
+  function aggiornaGraficaStelle() {
+    const container = document.getElementById('starsGroupContainer');
+    const stelle = container.querySelectorAll('.star-item');
+    stelle.forEach((s, idx) => {
+      if ((idx + 1) <= stelleSelezionateCapace) {
+        s.classList.add('selected-star');
+      } else {
+        s.classList.remove('selected-star');
+      }
+    });
+  }
+
+  function inviaGiornoCorrente() {
+    if (!giornoSelezionatoChiave) {
+      alert("Seleziona prima un giorno dal calendario!");
+      return;
+    }
+
+    const giaCompilato = databaseDiarioLocale[giornoSelezionatoChiave] !== undefined;
+
+    const a1 = document.getElementById('attivita1').value.trim();
+    const a2 = document.getElementById('attivita2').value.trim();
+    const a3 = document.getElementById('attivita3').value.trim();
+    const a4 = document.getElementById('attivita4').value.trim();
+    const a5 = document.getElementById('attivita5').value.trim();
+    const valImportante = document.getElementById('cosaImportante').value.trim();
+    const valEmozione = document.getElementById('selectEmozionediOggi').value;
+    const valPerche = document.getElementById('percheEmozione').value.trim();
+    const valCapacePerche = document.getElementById('capacePercheInput').value.trim();
+    const eVer = giornoSelezionatoDataObj && giornoSelezionatoDataObj.getDay() === 5;
+
+    databaseDiarioLocale[giornoSelezionatoChiave] = {
+      attivita1: a1,
+      attivita2: a2,
+      attivita3: a3,
+      attivita4: a4,
+      attivita5: a5,
+      cosaImportante: valImportante,
+      emozione: valEmozione,
+      percheEmozione: valPerche,
+      mood: moodSelezionatoCorrente,
+      stelleCapace: stelleSelezionateCapace,
+      capacePerche: valCapacePerche,
+      fineRiuscito: eVer ? document.getElementById('fineRiuscito').value : "",
+      fineDifficile: eVer ? document.getElementById('fineDifficile').value.trim() : "",
+      fineProssima: eVer ? document.getElementById('fineProssima').value.trim() : ""
+    };
+
+    let moneteGuadagnate = 0;
+    if (!giaCompilato) {
+      if (eVer) {
+        moneteGuadagnate = 15;
+      } else {
+        moneteGuadagnate = 10;
+      }
+      giorniCompilatiSettimana.add(giornoSelezionatoChiave);
+
+      if (giorniCompilatiSettimana.size === 5) {
+        moneteGuadagnate += 15;
+        alert("🎉 BONUS SETTIMANA COMPLETA! Hai ricevuto +15 🪙 extra per la tua costanza!");
+      }
+
+      monete += moneteGuadagnate;
+      aggiornaMoneteGrafica();
+    }
+
+    const payload = {
+      action: "submit",
+      username: currentUser,
+      dataGiorno: giornoSelezionatoChiave,
+      attivita1: a1,
+      attivita2: a2,
+      attivita3: a3,
+      attivita4: a4,
+      attivita5: a5,
+      statoAnimo: valEmozione,
+      importanteOggi: valImportante,
+      percheCapace: valCapacePerche,
+      stelleCapace: stelleSelezionateCapace,
+      noteAltro: valPerche
+    };
+
+    let msg = `Giornata salvata!`;
+    if (moneteGuadagnate > 0) {
+      msg += ` Hai guadagnato +${moneteGuadagnate} 🪙!`;
+    }
+    inviaAGoogle(payload, msg);
+  }
+
+  function inviaAGoogle(data, messaggio) {
+    mostraCaricamento("Salvataggio in corso...");
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(data)
+    }).then(() => {
+      nascondiCaricamento();
+      if (!statoMissioni[2].sbloccata) {
+        statoMissioni[2].sbloccata = true;
+        aggiornaStatoPulsanteMissione(2);
+      }
+      alert(messaggio);
+    }).catch(() => {
+      nascondiCaricamento();
+      alert("Errore di invio al server.");
+    });
+  }
+
+  function toggleNegozioExtra() {
+    const contExtra = document.getElementById('contenitoreExtraCarte');
+    const txtBtn = document.getElementById('txt-btn-extra');
+    if (contExtra.classList.contains('hidden')) {
+      contExtra.classList.remove('hidden');
+      txtBtn.innerText = "▲ Chiudi";
+    } else {
+      contExtra.classList.add('hidden');
+      txtBtn.innerText = "▼ Mostra Catalogo";
+    }
+  }
+
+  function toggleMazzoTendina() {
+    const contMazzo = document.getElementById('contenitoreMazzoTendina');
+    const txtBtn = document.getElementById('txt-btn-mazzo');
+    if (contMazzo.classList.contains('hidden')) {
+      contMazzo.classList.remove('hidden');
+      txtBtn.innerText = "▲ Chiudi";
+      renderMazzoEditor();
+    } else {
+      contMazzo.classList.add('hidden');
+      txtBtn.innerText = "▼ Mostra Deck";
+    }
+  }
+
+  function renderMazzoEditor() {
+    const slotsCont = document.getElementById('deckSlotsContainer');
+    slotsCont.innerHTML = "";
+    for (let i = 0; i < 5; i++) {
+      const slotDiv = document.createElement('div');
+      const cartaId = mazzoCorrente[i];
+      if (cartaId !== null && cartaId !== undefined) {
+        const cartaObj = carteCatalogo.find(c => c.id.toString() === cartaId.toString());
+        const img = cartaObj && cartaObj.img ? 'https://images.weserv.nl/?url=' + encodeURIComponent(cartaObj.img) : '';
+        slotDiv.className = "deck-slot filled";
+        slotDiv.innerHTML = `<img src="${img}" onclick="zoomCard('${img}')"><div class="deck-slot-remove" onclick="rimuoviCartaDalMazzo(${i})">✕</div>`;
+      } else {
+        slotDiv.className = "deck-slot";
+        slotDiv.innerHTML = "+";
+      }
+      slotsCont.appendChild(slotDiv);
+    }
+
+    const gridSbl = document.getElementById('gridCarteSbloccateMazzo');
+    gridSbl.innerHTML = "";
+    if (unlockedCards.length === 0) {
+      gridSbl.innerHTML = `<p style="grid-column: span 4; font-size:11px; color:#94a3b8; text-align:center;">Non hai ancora sbloccato nessun educatore comune!</p>`;
+      return;
+    }
+
+    unlockedCards.forEach(idCard => {
+      const c = carteCatalogo.find(item => item.id.toString() === idCard.toString());
+      if (c) {
+        const img = c.img ? 'https://images.weserv.nl/?url=' + encodeURIComponent(c.img) : '';
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "carta-item";
+        itemDiv.innerHTML = `<img src="${img}" onclick="zoomCard('${img}')"><b style="font-size:10px; margin-top:2px;">${c.nome}</b><span style="font-size:9px; color:#facc15;">ATK ${c.atk} / DEF ${c.def}</span><span class="rarita rarita-Comune">Comune</span><button class="btn-buy-card" style="background:#2563eb; color:white; border-color:#60a5fa;" onclick="aggiungiCartaAlMazzo('${c.id}')">Aggiungi</button>`;
+        gridSbl.appendChild(itemDiv);
+      }
+    });
+  }
+
+  function aggiungiCartaAlMazzo(idCard) {
+    const primoVuoto = mazzoCorrente.indexOf(null);
+    if (primoVuoto === -1) {
+      alert("Il tuo mazzo è già pieno (5/5 carte)!");
+      return;
+    }
+    mazzoCorrente[primoVuoto] = idCard.toString();
+    renderMazzoEditor();
+  }
+
+  function rimuoviCartaDalMazzo(index) {
+    mazzoCorrente[index] = null;
+    renderMazzoEditor();
+  }
+
+  function salvaMazzoUtente() {
+    const inserite = mazzoCorrente.filter(x => x !== null).length;
+    if (inserite === 0) {
+      alert("Il mazzo è vuoto! Inserisci le tue carte.");
+      return;
+    }
+    alert(`Mazzo salvato correttamente con ${inserite} educatori!`);
+    document.getElementById('contenitoreMazzoTendina').classList.add('hidden');
+    document.getElementById('txt-btn-mazzo').innerText = "▼ Vedi mazzo";
+  }
+
+  function acquistaCarta(idCarta) {
+    const idStr = idCarta.toString();
+    if (unlockedCards.includes(idStr)) { alert("Possiedi già questo educatore!"); return; }
+    if (monete < PREZZO_CARTA) { alert(`Monete insufficienti! Ti servono ${PREZZO_CARTA} 🪙 monete.`); return; }
+
+    monete -= PREZZO_CARTA;
+    unlockedCards.push(idStr);
+    
+    const slotLibero = mazzoCorrente.indexOf(null);
+    if (slotLibero !== -1) {
+      mazzoCorrente[slotLibero] = idStr;
+    }
+
+    aggiornaMoneteGrafica();
+    caricaCarte();
+    alert(`🎉 Educatore sbloccato con successo! (${unlockedCards.length}/21 sbloccati)`);
+  }
+
+  async function caricaCarte() {
+    const nomiPersonaggi = [
+      "Guerriero della Logica", "Oratore Incalzante", "Pioniere Curioso", "Scienziato Impulsivo", "Atleta della Mente",
+      "Custode della Pazienza", "Maestro dello Scudo", "Saggio Riflessivo", "Filosofo Calmo", "Guardiano del Silenzio",
+      "Educatore Guida", "Tutor Incoraggiante", "Scriba Costante", "Cartografo Esperto", "Archimede Tecnico",
+      "Esploratore delle Idee", "Cronista dei Fatti", "Mentore Insieme", "Inventore Geniale", "Linguista Preciso",
+      "Maestro delle Parole"
+    ];
+
+    const statsPreset = [
+      [6,2], [5,3], [5,2], [6,3], [4,3],
+      [2,6], [1,7], [2,5], [3,5], [2,7],
+      [4,4], [3,4], [4,5], [3,3], [5,4],
+      [3,6], [5,1], [2,4], [6,1], [4,2],
+      [3,5]
+    ];
+
+    let listaCarte = [];
+    for (let i = 0; i < 21; i++) {
+      let idStr = (i + 1).toString();
+      listaCarte.push({
+        id: idStr,
+        nome: nomiPersonaggi[i],
+        atk: statsPreset[i][0],
+        def: statsPreset[i][1],
+        rarita: "Comune",
+        img: `https://picsum.photos/seed/edu${i+1}/200/260`
+      });
+    }
+    carteCatalogo = listaCarte;
+
+    function renderCarta(c) {
+      const sbl = unlockedCards.includes(c.id);
+      const img = c.img ? 'https://images.weserv.nl/?url=' + encodeURIComponent(c.img) : '';
+      if (sbl) {
+        return `<div class="carta-item"><img src="${img}" onclick="zoomCard('${img}')"><b style="font-size:10px; margin-top:2px;">${c.nome}</b><span style="font-size:9px; color:#facc15;">ATK ${c.atk} / DEF ${c.def}</span><span class="rarita rarita-Comune">Comune</span><span style="font-size:8px; color:#4ade80; margin-top:2px;">✓ Sbloccata</span></div>`;
+      } else {
+        return `<div class="carta-item bloccata"><div class="img-placeholder">🔒<span style="font-size:9px; color:#facc15;">15 🪙</span></div><b style="font-size:10px;">${c.nome}</b><span style="font-size:8px; color:#94a3b8;">ATK ${c.atk} / DEF ${c.def}</span><span class="rarita rarita-Comune">Comune</span><button class="btn-buy-card" onclick="acquistaCarta('${c.id}')">Acquista</button></div>`;
+      }
+    }
+
+    let hExt = "";
+    listaCarte.forEach(c => { hExt += renderCarta(c); });
+    document.getElementById('gridCarteExtra').innerHTML = hExt;
+  }
+
+  function zoomCard(src) {
+    if(!src) return;
+    document.getElementById("cardZoomModal").style.display = "block";
+    document.getElementById("cardZoomImage").src = src;
+  }
+  function closeCardZoom() { document.getElementById("cardZoomModal").style.display = "none"; }
+
+  // --- ARENA ONLINE FIREBASE 1VS1 (DUE ACCOUNT SEPARATI) ---
+
+  function creaOEntraStanza() {
+    const codice = document.getElementById('inputCodiceStanza').value.trim().toUpperCase();
+    const nicknameUtente = (typeof currentNickname !== 'undefined' && currentNickname) ? currentNickname : (currentUser || "Giocatore");
+    
+    if (!codice) {
+      alert("Inserisci un codice stanza valido!");
+      return;
+    }
+
+    stanzaIdCorrente = codice;
+    isModalitaOnline = true;
+    refStanzaFirebase = database.ref('partite/' + stanzaIdCorrente);
+
+    mostraCaricamento("Connessione alla stanza " + stanzaIdCorrente + "...");
+
+    refStanzaFirebase.once('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        mioRuoloStanza = 1;
+        initalizzaStanzaFirebase(nicknameUtente);
+      } else {
+        mioRuoloStanza = 2;
+        connettiAStanzaEsistente(data, nicknameUtente);
+      }
+    });
+  }
+
+  function initalizzaStanzaFirebase(nomeP1) {
+    let carteP1 = ottieniMazzoOPredefinito();
+    let carteP2Default = [
+      { nome: "Custode della Pazienza", rarita: "Comune", atk: 2, def: 6, img: "https://picsum.photos/seed/edu6/200/260" },
+      { nome: "Maestro dello Scudo", rarita: "Comune", atk: 1, def: 7, img: "https://picsum.photos/seed/edu7/200/260" },
+      { nome: "Saggio Riflessivo", rarita: "Comune", atk: 2, def: 5, img: "https://picsum.photos/seed/edu8/200/260" },
+      { nome: "Filosofo Calmo", rarita: "Comune", atk: 3, def: 5, img: "https://picsum.photos/seed/edu9/200/260" },
+      { nome: "Guardiano del Silenzio", rarita: "Comune", atk: 2, def: 7, img: "https://picsum.photos/seed/edu10/200/260" }
+    ];
+
+    const statoIniziale = {
+      p1: { hp: 20, attiva: carteP1[0], panchina: carteP1.slice(1), nome: nomeP1 },
+      p2: { hp: 20, attiva: carteP2Default[0], panchina: carteP2Default.slice(1), nome: "In attesa dell'avversario..." },
+      turnoAttuale: 1,
+      conteggioTurni: 1,
+      paP1: 2,
+      paP2: 2,
+      haAttaccatoP1: false,
+      haAttaccatoP2: false,
+      effettoTerreno: elencoEffettiTerreno[Math.floor(Math.random() * elencoEffettiTerreno.length)],
+      effettoUsato: false
+    };
+
+    refStanzaFirebase.set(statoIniziale, () => {
+      nascondiCaricamento();
+      ascoltaCambiamentiStanza();
+      document.getElementById('arenaModal').style.display = "block";
+    });
+  }
+
+  function connettiAStanzaEsistente(dataStanza, nomeP2) {
+    let carteP2 = ottieniMazzoOPredefinito();
+    dataStanza.p2 = {
+      hp: 20,
+      attiva: carteP2[0],
+      panchina: carteP2.slice(1),
+      nome: nomeP2
+    };
+
+    refStanzaFirebase.update({ p2: dataStanza.p2 }, () => {
+      nascondiCaricamento();
+      ascoltaCambiamentiStanza();
+      document.getElementById('arenaModal').style.display = "block";
+    });
+  }
+
+  function ottieniMazzoOPredefinito() {
+    let carteMazzoUtente = mazzoCorrente
+      .filter(id => id !== null && id !== undefined)
+      .map(id => {
+        let cat = carteCatalogo.find(c => c.id.toString() === id.toString());
+        return cat ? { nome: cat.nome, rarita: cat.rarita, atk: cat.atk, def: cat.def, img: cat.img } : null;
+      })
+      .filter(x => x !== null);
+
+    if (carteMazzoUtente.length === 5) return carteMazzoUtente;
+
+    return [
+      { nome: "Guerriero della Logica", rarita: "Comune", atk: 6, def: 2, img: "https://picsum.photos/seed/edu1/200/260" },
+      { nome: "Oratore Incalzante", rarita: "Comune", atk: 5, def: 3, img: "https://picsum.photos/seed/edu2/200/260" },
+      { nome: "Pioniere Curioso", rarita: "Comune", atk: 5, def: 2, img: "https://picsum.photos/seed/edu3/200/260" },
+      { nome: "Scienziato Impulsivo", rarita: "Comune", atk: 6, def: 3, img: "https://picsum.photos/seed/edu4/200/260" },
+      { nome: "Atleta della Mente", rarita: "Comune", atk: 4, def: 3, img: "https://picsum.photos/seed/edu5/200/260" }
+    ];
+  }
+
+  function ascoltaCambiamentiStanza() {
+    refStanzaFirebase.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      p1 = data.p1;
+      p2 = data.p2;
+      turnoAttuale = data.turnoAttuale;
+      conteggioTurni = data.conteggioTurni;
+      paP1 = data.paP1;
+      paP2 = data.paP2;
+      haAttaccatoQuestoTurnoP1 = data.haAttaccatoP1;
+      haAttaccatoQuestoTurnoP2 = data.haAttaccatoP2;
+      effettoTerrenoCorrente = data.effettoTerreno;
+      effettoUsatoNelCiclo = data.effettoUsato;
+
+      if (effettoTerrenoCorrente) {
+        document.getElementById('event-name').innerText = `Terreno: ${effettoTerrenoCorrente.nome}`;
+        document.getElementById('event-desc').innerText = effettoTerrenoCorrente.desc;
+        document.getElementById('btn-use-card').disabled = effettoUsatoNelCiclo;
+      }
+
+      aggiornaGraficaArena();
+    });
+  }
+
+  function salvaStatoStanzaFirebase() {
+    if (!isModalitaOnline || !refStanzaFirebase) return;
+    refStanzaFirebase.set({
+      p1, p2, turnoAttuale, conteggioTurni, paP1, paP2,
+      haAttaccatoP1: haAttaccatoQuestoTurnoP1,
+      haAttaccatoP2: haAttaccatoQuestoTurnoP2,
+      effettoTerreno: effettoTerrenoCorrente,
+      effettoUsato: effettoUsatoNelCiclo
+    });
+  }
+
+  // --- RENDERING GRAFICO PROSPETTIVO (TU IN BASSO, AVVERSARIO IN ALTO) ---
+
+  function aggiornaGraficaArena() {
+    const mioOggetto = mioRuoloStanza === 1 ? p1 : p2;
+    const avvOggetto = mioRuoloStanza === 1 ? p2 : p1;
+    const mioPa = mioRuoloStanza === 1 ? paP1 : paP2;
+    
+    const eIlMioTurno = (turnoAttuale === mioRuoloStanza);
+
+    document.getElementById('label-p1').innerText = (mioOggetto ? mioOggetto.nome : "Tu") + " (Tu)";
+    document.getElementById('label-p2').innerText = (avvOggetto ? avvOggetto.nome : "Avversario") + " (Avversario)";
+
+    document.getElementById('hp-p1').innerText = mioOggetto ? mioOggetto.hp : 20;
+    document.getElementById('hp-p2').innerText = avvOggetto ? avvOggetto.hp : 20;
+
+    document.getElementById('txt-turn').innerText = eIlMioTurno ? "IL TUO TURNO!" : "Turno Avversario";
+    document.getElementById('val-pa').innerText = mioPa;
+
+    renderCartaArena("p1", mioOggetto ? mioOggetto.attiva : null);
+    renderCartaArena("p2", avvOggetto ? avvOggetto.attiva : null);
+
+    renderPanchinaArena("p1", mioOggetto ? mioOggetto.panchina : [], mioRuoloStanza);
+    renderPanchinaArena("p2", avvOggetto ? avvOggetto.panchina : [], mioRuoloStanza === 1 ? 2 : 1);
+  }
+
+  function renderCartaArena(prefix, carta) {
+    const el = document.getElementById(`${prefix}-active-card`);
+    if (!el) return;
+    if (!carta) {
+      el.className = "card-tcg card-active-tcg card-empty-active";
+      el.innerHTML = "Vuoto";
+      el.onclick = null;
+    } else {
+      el.className = "card-tcg card-active-tcg";
+      const img = carta.img ? `<img src="${carta.img}">` : "";
+      el.innerHTML = `<div class="card-stats"><span class="stat-atk">ATK ${carta.atk}</span><span class="stat-def">DEF ${carta.def}</span></div><div class="card-img-arena">${img}</div><div class="card-name-arena">${carta.nome}</div>`;
+      el.onclick = () => zoomCard(carta.img);
+    }
+  }
+
+  function renderPanchinaArena(prefix, panchina, pNumOwner) {
+    const bench = document.getElementById(`${prefix}-bench`);
+    if (!bench) return;
+    bench.innerHTML = "";
+    
+    (panchina || []).forEach((c, idx) => {
+      const slot = document.createElement('div');
+      if (!c) {
+        slot.className = "card-tcg card-bench bench-empty";
+        slot.innerHTML = "-";
+      } else {
+        slot.className = "card-tcg card-bench";
+        const img = c.img ? `<img src="${c.img}">` : "";
+        slot.innerHTML = `<div class="card-stats"><span class="stat-atk">ATK ${c.atk}</span><span class="stat-def">DEF ${c.def}</span></div><div class="card-img-arena">${img}</div><div class="card-name-arena">${c.nome}</div>`;
+        
+        if (pNumOwner === mioRuoloStanza) {
+          slot.onclick = () => { scambiaPanchinaMio(idx); };
+        } else {
+          slot.onclick = () => { zoomCard(c.img); };
+        }
+      }
+      bench.appendChild(slot);
+    });
+  }
+
+  function eseguiAttaccoMio() {
+    attacca(mioRuoloStanza);
+  }
+
+  function scambiaPanchinaMio(idx) {
+    scambiaPanchina(mioRuoloStanza, idx);
+  }
+
+  function attacca(giocatoreNum) {
+    if (mioRuoloStanza !== giocatoreNum) {
+      alert("Non puoi controllare le azioni dell'avversario!");
+      return;
+    }
+
+    if (turnoAttuale !== giocatoreNum) {
+      alert("Non è il tuo turno! Attendi la mossa dell'avversario.");
+      return;
+    }
+
+    let haAttaccato = giocatoreNum === 1 ? haAttaccatoQuestoTurnoP1 : haAttaccatoQuestoTurnoP2;
+    if (haAttaccato) {
+      alert("Hai già attaccato in questo turno!");
+      return;
+    }
+
+    let paCorrente = giocatoreNum === 1 ? paP1 : paP2;
+    if (paCorrente < 1) {
+      alert("PA insufficienti per attaccare!");
+      return;
+    }
+
+    if (giocatoreNum === 1) {
+      paP1--;
+      haAttaccatoQuestoTurnoP1 = true;
+      if (p2.attiva) {
+        p2.attiva.def -= p1.attiva ? p1.attiva.atk : 1;
+        if (p2.attiva.def <= 0) {
+          p2.attiva = null;
+          alert("Hai sconfitto la carta attiva avversaria!");
+        }
+      } else {
+        p2.hp = Math.max(0, p2.hp - (p1.attiva ? p1.attiva.atk : 1));
+      }
+    } else {
+      paP2--;
+      haAttaccatoQuestoTurnoP2 = true;
+      if (p1.attiva) {
+        p1.attiva.def -= p2.attiva ? p2.attiva.atk : 1;
+        if (p1.attiva.def <= 0) {
+          p1.attiva = null;
+          alert("Hai sconfitto la carta attiva avversaria!");
+        }
+      } else {
+        p1.hp = Math.max(0, p1.hp - (p2.attiva ? p2.attiva.atk : 1));
+      }
+    }
+
+    verificaFineCarte();
+    aggiornaGraficaArena();
+    salvaStatoStanzaFirebase();
+  }
+
+  function scambiaPanchina(giocatoreNum, idx) {
+    if (mioRuoloStanza !== giocatoreNum) {
+      alert("Non puoi toccare le carte dell'avversario!");
+      return;
+    }
+
+    if (turnoAttuale !== giocatoreNum) {
+      alert("Non è il tuo turno!");
+      return;
+    }
+
+    let paCorrente = giocatoreNum === 1 ? paP1 : paP2;
+    let p = giocatoreNum === 1 ? p1 : p2;
+
+    if (!p.cambioGratis && paCorrente < 1) {
+      alert("PA insufficienti per cambiare carta!");
+      return;
+    }
+
+    if (!p.cambioGratis) {
+      if (giocatoreNum === 1) paP1--; else paP2--;
+    } else {
+      p.cambioGratis = false;
+    }
+
+    let tmp = p.attiva;
+    p.attiva = p.panchina[idx];
+    p.panchina[idx] = tmp;
+
+    aggiornaGraficaArena();
+    salvaStatoStanzaFirebase();
+  }
+
+  function attivaEffettoTerreno() {
+    let paAttivo = turnoAttuale === 1 ? paP1 : paP2;
+    if (turnoAttuale !== mioRuoloStanza) {
+      alert("Puoi attivare l'effetto solo nel tuo turno!");
+      return;
+    }
+
+    if (paAttivo < 1 || effettoUsatoNelCiclo) return;
+    
+    if (turnoAttuale === 1) paP1--; else paP2--;
+    effettoUsatoNelCiclo = true;
+    
+    let att = turnoAttuale === 1 ? p1 : p2;
+    let dif = turnoAttuale === 1 ? p2 : p1;
+    let idEffetto = effettoTerrenoCorrente ? effettoTerrenoCorrente.id : 1;
+
+    switch(idEffetto) {
+      case 1: if(att.attiva) att.attiva.atk += 1; break;
+      case 2: if(att.attiva) att.attiva.def += 1; break;
+      case 3: att.scattoGratis = true; break;
+      case 4: att.hp = Math.min(20, att.hp + 1); break;
+      case 5: if(dif.attiva) dif.attiva.def = Math.max(0, dif.attiva.def - 1); break;
+      case 6: if(att.attiva && att.attiva.def > att.attiva.atk) att.attiva.def += 2; break;
+      case 7: dif.hp = Math.max(0, dif.hp - 1); break;
+      case 8: att.cambioGratis = true; break;
+      case 9: if(att.attiva) att.attiva.atk += 1; break;
+      case 10: att.scudoGruppo = true; break;
+      case 11: if(turnoAttuale === 1) paP1 = Math.min(3, paP1 + 1); else paP2 = Math.min(3, paP2 + 1); break;
+      case 12: att.hp = Math.min(20, att.hp + 1); dif.hp = Math.min(20, dif.hp + 1); break;
+      case 13: if(att.attiva && att.attiva.atk <= 3) att.attiva.atk *= 2; break;
+      case 14: if(att.attiva) att.attiva.def = Math.max(1, att.attiva.def); break;
+      case 15: 
+        if(dif.panchina && dif.panchina.length > 1) { 
+          let tmp = dif.panchina[0]; 
+          dif.panchina[0] = dif.panchina[dif.panchina.length-1]; 
+          dif.panchina[dif.panchina.length-1] = tmp; 
+        } 
+        break;
+    }
+
+    document.getElementById('btn-use-card').disabled = true;
+    alert(`Effetto attivato: ${effettoTerrenoCorrente.nome}`);
+    aggiornaGraficaArena();
+    salvaStatoStanzaFirebase();
+  }
+
+  function fineTurno() {
+    if (turnoAttuale !== mioRuoloStanza) {
+      alert("Non puoi passare il turno dell'avversario!");
+      return;
+    }
+
+    if (turnoAttuale === 1) {
+      turnoAttuale = 2;
+      paP2 = 2;
+      haAttaccatoQuestoTurnoP2 = false;
+    } else {
+      turnoAttuale = 1;
+      conteggioTurni++;
+      paP1 = 2;
+      haAttaccatoQuestoTurnoP1 = false;
+
+      if (conteggioTurni % 2 === 0) {
+        effettoTerrenoCorrente = elencoEffettiTerreno[Math.floor(Math.random() * elencoEffettiTerreno.length)];
+        effettoUsatoNelCiclo = false;
+      }
+    }
+    aggiornaGraficaArena();
+    salvaStatoStanzaFirebase();
+  }
+
+  function verificaFineCarte() {
+    const p1Carte = (p1 && p1.attiva ? 1 : 0) + (p1 && p1.panchina ? p1.panchina.filter(c => c !== null).length : 0);
+    const p2Carte = (p2 && p2.attiva ? 1 : 0) + (p2 && p2.panchina ? p2.panchina.filter(c => c !== null).length : 0);
+
+    if (p1Carte === 0 || p2Carte === 0) {
+      let nomeP1 = p1?.nome || "Giocatore 1";
+      let nomeP2 = p2?.nome || "Giocatore 2";
+      let messaggio = "Partita conclusa!\n\n";
+
+      if (p1.hp > p2.hp) {
+        messaggio += `VINCE ${nomeP1}!`;
+      } else if (p2.hp > p1.hp) {
+        messaggio += `VINCE ${nomeP2}!`;
+      } else {
+        messaggio += `PAREGGIO!`;
+      }
+
+      alert(messaggio);
+      document.getElementById('arenaModal').style.display = "none";
+      return true;
+    }
+    return false;
+  }
+
+  function richiediUscitaArena() { document.getElementById('confirmExitModal').style.display = "flex"; }
+  function chiudiConfermaUscita() { document.getElementById('confirmExitModal').style.display = "none"; }
+  
+  function confermaUscitaArena() {
+    chiudiConfermaUscita();
+    if (isModalitaOnline && refStanzaFirebase) {
+      refStanzaFirebase.off();
+    }
+    document.getElementById('arenaModal').style.display = "none";
+  }
+
+  function apriProfilo() { document.getElementById('profileModal').style.display = "flex"; }
+  function chiudiProfilo() { document.getElementById('profileModal').style.display = "none"; }
+
+  function salvaProfilo() {
+    const nick = document.getElementById('profNickname').value.trim();
+    const nome = document.getElementById('profNome').value.trim();
+    const cognome = document.getElementById('profCognome').value.trim();
+    const eta = document.getElementById('profEta').value.trim();
+    const scuola = document.getElementById('profScuola').value.trim();
+    const classe = document.getElementById('profClasse').value.trim();
+
+    if (!nome || !cognome || !eta || !scuola || !classe) {
+      alert("Compila tutti i campi!");
+      return;
+    }
+
+    currentNickname = nick || currentUser;
+    localStorage.setItem('vides_nick', currentNickname);
+
+    const payload = {
+      action: "saveProfile",
+      username: currentUser,
+      nickname: currentNickname,
+      nome, cognome, eta, scuola, classe
+    };
+
+    mostraCaricamento("Salvataggio...");
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    }).then(() => {
+      nascondiCaricamento();
+      document.getElementById('prof-msg').style.color = "#4ade80";
+      document.getElementById('prof-msg').innerText = "Salvato!";
+      setTimeout(() => { chiudiProfilo(); }, 1000);
+    }).catch(() => {
+      nascondiCaricamento();
+      document.getElementById('prof-msg').style.color = "#f87171";
+      document.getElementById('prof-msg').innerText = "Errore.";
+    });
+  }
+
+  function apriMessaggi() { document.getElementById('messagesModal').style.display = "flex"; caricaMessaggi(); }
+  function chiudiMessaggi() { document.getElementById('messagesModal').style.display = "none"; }
+  async function caricaMessaggi() {
+    const container = document.getElementById('listaMessaggiContainer');
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getMessages`);
+      const data = await res.json();
+      if (data && data.messaggi && data.messaggi.length > 0) {
+        let html = "";
+        data.messaggi.forEach(m => {
+          html += `<div class="msg-card"><div class="msg-date">📅 ${m.data}</div><div class="msg-title">${m.titolo}</div><div class="msg-body">${m.testo}</div></div>`;
+        });
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px;">Nessun messaggio.</p>`;
+      }
+    } catch(e) {
+      container.innerHTML = `<p style="text-align: center; color: #ef4444; font-size: 12px;">Errore caricamento.</p>`;
+    }
+  }
+
+  function apriMissioni() { document.getElementById('missionsModal').style.display = "flex"; }
+  function chiudiMissioni() { document.getElementById('missionsModal').style.display = "none"; }
+  function apriImpostazioni() { alert("Impostazioni in sviluppo"); }
+
+  function riscattaMissione(id) {
+    if (!statoMissioni[id].sbloccata || statoMissioni[id].riscatta) return;
+    statoMissioni[id].riscatta = true;
+    aggiornaStatoPulsanteMissione(id);
+    aggiornaBarraMissioni();
+    alert(`Missione ${id} riscattata!`);
+  }
+
+  function aggiornaStatoPulsanteMissione(id) {
+    const btn = document.getElementById(`btn-m${id}`);
+    if (!btn) return;
+    if (statoMissioni[id].riscatta) { btn.innerText = "✓ Fatto"; btn.disabled = true; }
+    else if (statoMissioni[id].sbloccata) { btn.innerText = "Riscatta"; btn.disabled = false; }
+  }
+
+  function aggiornaBarraMissioni() {
+    let conteggio = Object.values(statoMissioni).filter(m => m.riscatta).length;
+    document.getElementById('mission-progress-fill').style.width = (conteggio / 3) * 100 + "%";
+    document.getElementById('completed-count-text').innerText = conteggio;
+  }
+
+  function aggiornaMoneteGrafica() {
+    document.getElementById('val-monete').innerText = monete;
+  }
+
+  function mostraRegistrazione() {
+    document.getElementById('auth-title').innerText = "Registrati";
+    document.getElementById('box-login').classList.add('hidden');
+    document.getElementById('box-register').classList.remove('hidden');
+  }
+
+  function mostraLogin() {
+    document.getElementById('auth-title').innerText = "Accedi al tuo Quaderno";
+    document.getElementById('box-register').classList.add('hidden');
+    document.getElementById('box-login').classList.remove('hidden');
+  }
+
+  async function effettuaRegistrazione() {
+    const user = document.getElementById('authUser').value.trim();
+    const pass = document.getElementById('authPass').value.trim();
+    if(!user || !pass) { alert("Compila tutti i campi!"); return; }
+
+    mostraCaricamento("Registrazione...");
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=register&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
+      const data = await res.json();
+      nascondiCaricamento();
+      if (data.status === "success") {
+        document.getElementById('auth-msg').style.color = "#4ade80";
+        document.getElementById('auth-msg').innerText = "Registrato!";
+        setTimeout(mostraLogin, 1500);
+      } else {
+        document.getElementById('auth-msg').style.color = "#f87171";
+        document.getElementById('auth-msg').innerText = data.message || "Errore.";
+      }
+    } catch(e) {
+      nascondiCaricamento();
+    }
+  }
+
+  async function effettuaLoginAutomatico(user, pass) {
+    mostraCaricamento("Accesso automatico...");
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
+      const data = await res.json();
+      nascondiCaricamento();
+      if (data.status === "success") {
+        currentUser = user;
+        if(!currentNickname) currentNickname = user;
+        unlockedCards = (data.unlockedCards || []).map(x => x.toString());
+        document.getElementById('section-auth').classList.add('hidden');
+        document.getElementById('section-app').classList.remove('hidden');
+        document.getElementById('welcome-header').innerText = currentUser;
+        caricaCarte();
+        
+        impostaGiornoOdiernoAutomatico();
+      } else {
+        localStorage.removeItem('vides_user');
+        localStorage.removeItem('vides_pass');
+      }
+    } catch(e) {
+      nascondiCaricamento();
+    }
+  }
+
+  async function effettuaLogin() {
+    const user = document.getElementById('authUser').value.trim();
+    const pass = document.getElementById('authPass').value.trim();
+    if(!user || !pass) { alert("Compila i campi!"); return; }
+
+    mostraCaricamento("Accesso...");
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
+      const data = await res.json();
+      nascondiCaricamento();
+      if (data.status === "success") {
+        currentUser = user;
+        if(!currentNickname) currentNickname = user;
+        localStorage.setItem('vides_user', user);
+        localStorage.setItem('vides_pass', pass);
+        localStorage.setItem('vides_nick', currentNickname);
+
+        unlockedCards = (data.unlockedCards || []).map(x => x.toString());
+        document.getElementById('section-auth').classList.add('hidden');
+        document.getElementById('section-app').classList.remove('hidden');
+        document.getElementById('welcome-header').innerText = currentUser;
+        caricaCarte();
+
+        impostaGiornoOdiernoAutomatico();
+      } else {
+        document.getElementById('auth-msg').style.color = "#f87171";
+        document.getElementById('auth-msg').innerText = data.message || "Credenziali errate.";
+      }
+    } catch(e) {
+      nascondiCaricamento();
+    }
+  }
+
+  function effettuaLogout() {
+    localStorage.clear();
+    location.reload();
+  }
+</script>
+
+</body>
+</html>
