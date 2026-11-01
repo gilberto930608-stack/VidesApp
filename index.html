@@ -1431,15 +1431,18 @@
       let isCompilato = databaseDiarioLocale[chiaveData] !== undefined;
 
       let classeColore = "";
+      let classeOggiExtra = "";
 
       if (annoVisualizzato === oggiY && meseVisualizzato === oggiM && d === oggiD) {
         classeColore = "status-yellow";
+        classeOggiExtra = " oggi-evidenziato";
       } else if (dataCella < new Date(oggiY, oggiM, oggiD)) {
         classeColore = isCompilato ? "status-green" : "status-red";
       } else {
         classeColore = "status-locked";
       }
 
+      cella.className = "cal-day-cell" + classeOggiExtra;
       cella.innerHTML = `<span class="${classeColore}">${d}</span>`;
       cella.onclick = () => selezionaGiornoCalendario(annoVisualizzato, meseVisualizzato, d, dataCella, oggiY, oggiM, oggiD, isCompilato);
       grid.appendChild(cella);
